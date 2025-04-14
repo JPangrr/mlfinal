@@ -60,6 +60,32 @@ print(df.describe())
 print("\nMissing Values Count:")
 print(df.isnull().sum())
 
+
+############################
+# parker's profiling part
+############################
+
+print("\nColumn Value Counts (Bleaching Severity):")
+print(df["Bleaching Severity"].value_counts())
+
+df['Bleaching Severity'] = df['Bleaching Severity'].fillna('None') 
+# apparently 'None' wasn't a string, so covert all na values to 'None'
+
+encoding_severity = {
+    'None': 0,
+    'Low': 1,
+    'Medium': 2,
+    'High': 3
+}
+
+df['Bleaching Severity Encoded'] = df['Bleaching Severity'].map(encoding_severity)
+print(df["Bleaching Severity Encoded"].value_counts())
+
+############################
+# end of parker's profiling part
+############################
+
+
 if 'date' in df.columns and not pd.api.types.is_datetime64_any_dtype(df['date']):
     df['date'] = pd.to_datetime(df['date'])
     df['year'] = df['date'].dt.year
@@ -69,9 +95,11 @@ if 'date' in df.columns and not pd.api.types.is_datetime64_any_dtype(df['date'])
 
 numerical_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
 categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
+categorical_cols.remove('Bleaching Severity') # added this to remove original column
 
 if 'date' in numerical_cols:
     numerical_cols.remove('date')
+
 
 print("\nNumerical Columns:", numerical_cols)
 print("Categorical Columns:", categorical_cols)

@@ -16,7 +16,8 @@ np.random.seed(42)
 try:
     df = pd.read_csv('realistic_ocean_climate_dataset.csv')
     print("Dataset loaded successfully with shape: {df.shape}")
-    print("\nFirst few rows of the dataset:")
+    print("\n\n\n======== PROFILING and SUMMARY STATISTICS ========\n")
+    print("First few rows of the dataset:")
     print(df.head())
 except FileNotFoundError:
     print("Dataset file not found. Please update the file path.")
@@ -60,11 +61,6 @@ print(df.describe())
 print("\nMissing Values Count:")
 print(df.isnull().sum())
 
-
-############################
-# parker's profiling part
-############################
-
 print("\nColumn Value Counts (Bleaching Severity):")
 print(df["Bleaching Severity"].value_counts())
 
@@ -79,15 +75,6 @@ encoding_severity = {
 }
 
 df['Bleaching Severity Encoded'] = df['Bleaching Severity'].map(encoding_severity)
-print(df["Bleaching Severity Encoded"].value_counts())
-
-print(df[["Bleaching Severity Encoded", "pH Level"]].corr())
-
-
-
-############################
-# end of parker's profiling part
-############################
 
 
 if 'date' in df.columns and not pd.api.types.is_datetime64_any_dtype(df['date']):
@@ -97,9 +84,15 @@ if 'date' in df.columns and not pd.api.types.is_datetime64_any_dtype(df['date'])
     df['day'] = df['date'].dt.day
     df['season'] = (df['month'] & 12 + 3) // 3
 
+###########################
+# TO WORK ON: Marine Heatwave column is not included 
+###########################
 numerical_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
 categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
-categorical_cols.remove('Bleaching Severity') # added this to remove original column
+
+# added this to remove original column, not going to be needed at all for the rest of the models
+categorical_cols.remove('Bleaching Severity') 
+df.drop(columns='Bleaching Severity')
 
 if 'date' in numerical_cols:
     numerical_cols.remove('date')
@@ -122,16 +115,9 @@ numerical_transformer = Pipeline(steps=[
 ])
 
 categorical_transformer = Pipeline(steps=[
-    ('imputer', SimpleImputer(strategy='mean')),
+    ('imputer', SimpleImputer(strategy='most_frequent')),
     ('onehot', OneHotEncoder(handle_unknown='ignore'))
 ])
-
-preprocessor = ColumnTransformer(
-    transformers=[
-        ('num', numerical_transformer, numerical_cols),
-        ('cat', categorical_transformer, categorical_cols)
-    ]
-)
 
 # Ensure column names are stripped of whitespace
 df.columns = df.columns.str.strip()
@@ -139,31 +125,32 @@ df.columns = df.columns.str.strip()
 # Check if 'SST' exists before proceeding
 if 'SST' in df.columns:
     regression_target = 'SST'
-
-    # bleaching severity column to drop
-    X = df.drop(columns=[regression_target, 'Bleaching Severity', 'Date', 'Marine Heatwave'] if 'Date' in df.columns else [regression_target])
+    X = df.drop(columns=[regression_target, 'Date'] if 'Date' in df.columns else [regression_target])
     y = df[regression_target]
     X_reg_train, X_reg_test, y_reg_train, y_reg_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
+    numerical_cols_SST = ['Latitude', 'Longitude', 'pH Level', 'Species Observed', 'Bleaching Severity Encoded']
+    categorical_cols_SST = ['Location']
+
+    preprocessor_SST = ColumnTransformer( # unique preprocessor for predicting SST
+        transformers=[
+            ('num', numerical_transformer, numerical_cols_SST),
+            ('cat', categorical_transformer, categorical_cols_SST)
+        ]
+    )
+
     linear_reg_pipeline = Pipeline(steps=[
-        ('preprocessor', preprocessor),
+        ('preprocessor', preprocessor_SST),
         ('regressor', LinearRegression())
     ])
 
-    print("Columns in X:", X.columns.tolist())
-    print("\nColumn dtypes:\n", X.dtypes)
-    
     linear_reg_pipeline.fit(X_reg_train, y_reg_train)
-    print('YEET2')
     y_pred_linear = linear_reg_pipeline.predict(X_reg_test)
-    print('YEET3')
     mse_linear = mean_squared_error(y_reg_test, y_pred_linear)
-    print('YEET4')
     rmse_linear = np.sqrt(mse_linear)
-    print('YEET5')
     r2_linear = r2_score(y_reg_test, y_pred_linear)
 
-    print("\n\nLinear Regression Results for SST:")
+    print("\n\n\n======== PREDICTION RESULTS: SST ========\n")
     print(f"Mean Squared Error: {mse_linear:.4f}")
     print(f"Root Mean Squared Error: {rmse_linear:.4f}")
     print(f"R² Score: {r2_linear:.4f}")
@@ -171,35 +158,44 @@ else:
     print("Column 'SST' not found in the dataset.")
     print("Available columns:", df.columns.tolist())
 
-if "Bleaching Severity Encoded " in df.columns: # joseph im testing and changing this to the encoded/numerical column
-    df['Bleaching_Category'] = pd.qcut(
-        df['Bleaching Severity Encoded'].fillna(df['Bleaching Severity Encoded'].median()),
-        4,
-        labels=["None", "Low", "Medium", "High"]
-    )
+if 'Bleaching Severity Encoded' in df.columns: # joseph im testing and renaming 'Bleaching Severity' to the updated 'Encoded' column
+    severity_map = {0: "None", 1: "Low", 2: "Medium", 3: "High"}
+    df['Bleaching_Category'] = df['Bleaching Severity Encoded'].map(severity_map)
+
 
     classification_target = 'Bleaching_Category'
-    X_cls = df.drop(columns=[classification_target, "Bleaching Severity", 'date'] if 'date' in df.columns else [classification_target, "Bleaching Severity"])
+    X_cls = df.drop(columns=[classification_target, "Bleaching Severity Encoded", 'Date'] if 'Date' in df.columns else [classification_target, "Bleaching Severity"])
     y_cls = df[classification_target]
 
     X_cls_train, X_cls_test, y_cls_train, y_cls_test = train_test_split(X_cls, y_cls, test_size=0.2, random_state=42, stratify=y_cls)
 
+    numerical_cols_severity = ['Latitude', 'Longitude', 'SST', 'pH Level', 'Species Observed']
+    categorical_cols_severity = ['Location']
+
+    preprocessor_severity = ColumnTransformer( # unique preprocessor for predicting severity
+        transformers=[
+            ('num', numerical_transformer, numerical_cols_severity),
+            ('cat', categorical_transformer, categorical_cols_severity)
+        ]
+    )
+
     log_reg_pipeline = Pipeline(steps=[
-        ('preprocessor', preprocessor),
+        ('preprocessor', preprocessor_severity),
         ('classifier', LogisticRegression(max_iter=1000, random_state=42))
     ])
     log_reg_pipeline.fit(X_cls_train, y_cls_train)
     y_pred_log_reg = log_reg_pipeline.predict(X_cls_test)
-
+    
     accuracy_log = accuracy_score(y_cls_test, y_pred_log_reg)
 
+    print("\n\n\n======== PREDICTION RESULTS: SST ========\n")
     print("\nLogistic Regression Results for {classification_target}:")
     print(f"Accuracy: {accuracy_log:.4f}")
     print("\nClassification Report:")
-    print(classification_report(y_cls_test, y_pred_log_reg))
+    print(classification_report(y_cls_test, y_pred_log_reg))  # SOMETHING AWK WITH CLASSIFICATION REPORT OUTPUT
 
     rf_cls_pipeline = Pipeline(steps=[
-        ('preprocessor', preprocessor),
+        ('preprocessor', preprocessor_severity),
         ('classifier', RandomForestClassifier(n_estimators=100, random_state=42))
     ])
     rf_cls_pipeline.fit(X_cls_train, y_cls_train)
@@ -267,7 +263,7 @@ if "SST (°C)" in df.columns:
     print("\nRegression Task (Predicting SST):")
     print(f"Linear Regression RMSE: {rmse_linear:.4f}, R²: {r2_linear:.4f}")
 
-if 'Bleaching Severity' in df.columns:
+if 'Bleaching Severity Encoded' in df.columns:
     print("\nClassification Task (Predicting Bleaching Severity):")
     print(f"Logistic Regression Accuracy: {accuracy_log:.4f}")
     print(f"Random Forest Accuracy: {accuracy_rf_cls:.4f}")

@@ -81,6 +81,10 @@ encoding_severity = {
 df['Bleaching Severity Encoded'] = df['Bleaching Severity'].map(encoding_severity)
 print(df["Bleaching Severity Encoded"].value_counts())
 
+print(df[["Bleaching Severity Encoded", "pH Level"]].corr())
+
+
+
 ############################
 # end of parker's profiling part
 ############################

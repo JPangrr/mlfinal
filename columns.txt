@@ -1,0 +1,23 @@
+Date: records the date the data was recorded
+- time is crucial for tracking trends such as seasonal patterns and long-term climate shifts
+
+Location: general name of the reef or sea region where observation took place (e.g., Red Sea, Great Barrier Reef). 
+- different regions have varying climates, marine biodiversity, and exposure to stressors like warming or pollution.
+
+Latitude & Longitude: geographic coordinates of the observation point
+- gives us precise mapping and spatial analysis (e.g., which areas are most affected by bleaching; and numerical application for location)
+
+SST (Sea Surface Temperature): temperature of the ocean’s surface at the location on that date (NOTE: in °C)
+- elevated SST has a major contribution to coral bleaching events
+
+pH Level: acidity of seawater at the given time (ranges are usually from 7.5–8.5 in oceans)
+- lower pH = more acidic water, often due to increased CO2 which can affect coral health
+
+Bleaching Severity: observed extent of coral bleaching, categorized as None, Low, Medium, or High (numerically notated as 0, 1, 2, 3 respectively)
+direct measure of coral health, so a more severe bleaching = greater stress or coral death
+
+Species Observed: # of marine species recorded during the survey
+proxy for biodiversity — bleaching or environmental stress might have a lower species count
+
+Marine Heatwave: True or False values indicating if location was experiencing a marine heatwave at the time
+- marine heatwaves are intense periods of unusually high SST, often strongly associated with mass bleaching events (what constitutes a marine heatwave?)

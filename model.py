@@ -5,7 +5,7 @@ import seaborn as sns
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
+from sklearn.pipeline import Pipeline, FeatureUnion # added feature union
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.ensemble import RandomForestClassifier
@@ -122,7 +122,7 @@ numerical_transformer = Pipeline(steps=[
 ])
 
 categorical_transformer = Pipeline(steps=[
-    ('imputer', SimpleImputer(strategy='most_frequent')),
+    ('imputer', SimpleImputer(strategy='mean')),
     ('onehot', OneHotEncoder(handle_unknown='ignore'))
 ])
 
@@ -140,9 +140,9 @@ df.columns = df.columns.str.strip()
 if 'SST' in df.columns:
     regression_target = 'SST'
 
-    X = df.drop(columns=[regression_target, 'date'] if 'date' in df.columns else [regression_target])
+    # bleaching severity column to drop
+    X = df.drop(columns=[regression_target, 'Bleaching Severity', 'Date', 'Marine Heatwave'] if 'Date' in df.columns else [regression_target])
     y = df[regression_target]
-
     X_reg_train, X_reg_test, y_reg_train, y_reg_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     linear_reg_pipeline = Pipeline(steps=[
@@ -150,10 +150,17 @@ if 'SST' in df.columns:
         ('regressor', LinearRegression())
     ])
 
+    print("Columns in X:", X.columns.tolist())
+    print("\nColumn dtypes:\n", X.dtypes)
+    
     linear_reg_pipeline.fit(X_reg_train, y_reg_train)
+    print('YEET2')
     y_pred_linear = linear_reg_pipeline.predict(X_reg_test)
+    print('YEET3')
     mse_linear = mean_squared_error(y_reg_test, y_pred_linear)
+    print('YEET4')
     rmse_linear = np.sqrt(mse_linear)
+    print('YEET5')
     r2_linear = r2_score(y_reg_test, y_pred_linear)
 
     print("\n\nLinear Regression Results for SST:")
@@ -164,9 +171,9 @@ else:
     print("Column 'SST' not found in the dataset.")
     print("Available columns:", df.columns.tolist())
 
-if "Bleaching Severity" in df.columns:
+if "Bleaching Severity Encoded " in df.columns: # joseph im testing and changing this to the encoded/numerical column
     df['Bleaching_Category'] = pd.qcut(
-        df['Bleaching Severity'].fillna(df['Bleaching Severity'].median()),
+        df['Bleaching Severity Encoded'].fillna(df['Bleaching Severity Encoded'].median()),
         4,
         labels=["None", "Low", "Medium", "High"]
     )
